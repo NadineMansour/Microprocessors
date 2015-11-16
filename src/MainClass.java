@@ -11,7 +11,7 @@ public class MainClass {
 	 * */
 	public static void main(String [] args){
 		int at = 0 ; //the access time of the main memory - should change this value
-		MainMemory main_memory = new MainMemory(at);
+		MainMemory main_memory = new MainMemory(at,0); //second argument --> line size 
 		int cache_levels = 0;
 		caches = new Icache [cache_levels+1];
 		
@@ -24,10 +24,29 @@ public class MainClass {
 		// repeat the same line for all the lines of code 
 		
 		// load the program to main memory
-		main_memory.load_program(program, 0);
+		int start = 0;
+		main_memory.load_program(program, start);
 		
 		//fetch all the program instructions
-		//lessa mesh 3arfa momken nemasheha ezai hanetkalem feeha 
+		int required_addres = start;
+		int end = start + (program.length*2) - 2;
+		while(required_addres <=end){
+			// Nadine 
+			/*
+			 * check the caches starting from the last one in the array
+			 * if the result = "" --> miss in this level otherwise it is a hit 
+			 * in case of miss go to the next level 
+			 * in case of hit in a cache level we need to update all the higher levels using what we found in the cache
+			 * in case of misses in all levels go to main memory then update all the caches 
+			 * */
+			required_addres+=2;
+		}
+	}
+	
+	void update_all_caches(int start_level , String []data , int ad){
+		for (int i = start_level; i <caches.length; i++) {
+			caches[i].update_cache(ad, data);
+		}
 	}
 	
 	// calculate the hit ratio for all the cache levels 
@@ -37,19 +56,21 @@ public class MainClass {
 		}
 	}
 	
+	
 	//calculate the AMAT
 	void AMAT(){
+		//Nadine
 		
 	}
 	
 	//calculate the IPC
 	void IPC(){
-		
+		//Nadine 
 	}
 	
-	//calculate the totale execution time in cycle
+	//calculate the total execution time in cycle
 	void EX(){
-		
+		//Hadeel + Mogh + Badr
 	}
 	
 

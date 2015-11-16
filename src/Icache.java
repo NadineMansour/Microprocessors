@@ -7,6 +7,7 @@ public class Icache {
 	 * associativity = otherwise --> m-way set associative
 	 * */
 	int s , l , m , access_time ;
+	String[][] valid_tag;
 	String[][] content;
 	int c;
 	int index_bits , offset_bits , tag_bits;
@@ -32,12 +33,18 @@ public class Icache {
 		trials = 0;
 		c  = s/l;
 		
-		content = new String[c][3];
+		valid_tag = new String[c][2];
+		content = new String [c][l];
 		//originally the cache is empty
+		for (int i = 0; i < valid_tag.length; i++) {
+			valid_tag[i][0] = "0";
+			valid_tag[i][1] = "";
+		}
+		
 		for (int i = 0; i < content.length; i++) {
-			content[i][0] = "0";
-			content[i][1] = "";
-			content[i][2] = "";
+			for (int j = 0; j < l; j++) {
+				content [i][j] = "";
+			}
 		}
 		
 		offset_bits = (int)(Math.log(l)/Math.log(2));
@@ -60,27 +67,59 @@ public class Icache {
 	 * based on the associativity level
 	 * */
 	public int[] address_subdivision(int address){
+		// Hadeel + Mogh + Badr
 		int[] result = new int [3];
 		/*
 		 * convert the number into binary and then 
 		 * extract the index , offset , tag 
 		 * convert them into integers again 
+		 * cell 0 --> tag
+		 * cell 1 --> index
+		 * cell 2 --> offset
 		 * */
 		return result;
 	}
 	
+    String direct_mapped( int[]address){
+		String result ="";
+		//Omar + Zeema
+		return result;
+	}
+	
+    
+    String fully( int[]address){
+		String result ="";
+		//Omar + Zeema
+		return result;
+	}
+    
+    String set( int[]address){
+		String result ="";
+		//Omar + Zeema
+		return result;
+	}
+    
+    void  update_cache(int ad , String[] data){
+    	 //Omar + Zeema
+    	/*
+    	 * address subdivision on ad 
+    	 * in case of direct mapped --> replace the specific index 
+    	 * in case of fully or m way --> LRU HOW!!?
+    	 * when updating cache valid bit to 1 and tag to the result of the sub division and the content to the data (argument)
+    	 * */
+    }
+    
 	public String check_Icache(int address){
 		String result = "";
 		trials++;
-		/*
-		 * do the address subdivision 
-		 * check the specific entry in the cache
-		 * if the valid bit is 1 and the tags are equal --> hit and increment the total hits  by 1 and return the instruction
-		 * otherwise --> miss and increment the number of misses by 1 and we have to call the check_Icache of the lower level
-		 * or read it from main memory in case we are in the last level
-		 * lessa mesh 3arfa hane3mel eh in case of miss hanroo7 ezai lel level ely ta7t aw main memory dih hanetefe2 3aleha bokra 
-		 * 
-		 * */
+		int [] division = address_subdivision(address);
+		if(m == 1 ){
+			result = direct_mapped(division);
+		}else if (m == c) {
+			result = fully(division);
+		}else{
+			result = set(division);
+		}
 		return result; 
 	}
 	
