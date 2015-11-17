@@ -68,7 +68,6 @@ public class Icache {
 	 * */
 	public int[] address_subdivision(int address){
 		// Hadeel + Mogh + Badr
-		int[] result = new int [3];
 		/*
 		 * convert the number into binary and then 
 		 * extract the index , offset , tag 
@@ -76,7 +75,19 @@ public class Icache {
 		 * cell 0 --> tag
 		 * cell 1 --> index
 		 * cell 2 --> offset
+		 * 
 		 * */
+		int[] result = new int [3];
+		String binary_address = Integer.toBinaryString(address);
+		for (int i = binary_address.length(); i < 16; i++) {
+			binary_address = "0"+binary_address;
+		}
+		String offset = binary_address.substring(16 - offset_bits);
+		String index = binary_address.substring(16 - offset_bits - index_bits , 16 - offset_bits) ;
+		String tag =  binary_address.substring(0 , tag_bits);
+		result[0] = Integer.parseInt(tag, 2);
+		result[1] = Integer.parseInt(index, 2);
+		result[2] = Integer.parseInt(offset, 2);
 		return result;
 	}
 	
