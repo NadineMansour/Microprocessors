@@ -80,21 +80,24 @@ public class Icache {
 		return result;
 	}
 	
-    String direct_mapped( int[]address){
-		String result ="";
+	/*
+	 * in the nest three methods we should return an array containing the entire block to be able to 
+	 * update al the higher caches and the required result which will be stored in the last cell after the data block*/
+    String[] direct_mapped( int[]address){
+		String[] result = new String [l+1];
 		//Omar + Zeema
 		return result;
 	}
 	
     
-    String fully( int[]address){
-		String result ="";
+    String[] fully( int[]address){
+		String[] result = new String [l+1];
 		//Omar + Zeema
 		return result;
 	}
     
-    String set( int[]address){
-		String result ="";
+    String[] set( int[]address){
+		String[] result = new String [l+1];
 		//Omar + Zeema
 		return result;
 	}
@@ -109,8 +112,8 @@ public class Icache {
     	 * */
     }
     
-	public String check_Icache(int address){
-		String result = "";
+	public String[] check_Icache(int address){
+		String[] result = new String [l+1];
 		trials++;
 		int [] division = address_subdivision(address);
 		if(m == 1 ){

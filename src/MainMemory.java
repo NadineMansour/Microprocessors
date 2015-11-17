@@ -25,9 +25,10 @@ public class MainMemory {
 		// dont forget to handle the case where one line can have more than one instruction
 	}
 	
-	public String read(int index){
+	public String [] read(int index){
 		// Hadeel + Mogh + Badr
-		// we have to read the entire block and not the specific byte in address = index 
+		// we have to read the entire block and not the specific byte in address = index  + the specific instruction and save it
+		// in the last cell in the array
 		return null;
 	}
 	
