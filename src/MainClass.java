@@ -77,6 +77,18 @@ public class MainClass {
 	//calculate the IPC
 	void IPC(){
 		//Nadine 
+		// CPI = Base CPI + CPI instructions + CPI Data 
+		// for now we do not calculate CPI Data
+		float cpi = 1; //base  cpi
+		float m_ratio = 1.0f;
+		for (int i = caches.length - 1; i >= 1; i--) {
+			if( i > 1 )
+				cpi += (caches[i].misses / caches[i].trials)* m_ratio * caches[i-1].access_time;
+			else
+				cpi += (caches[i].misses / caches[i].trials) * m_ratio * main_memory.access_time;
+			m_ratio += caches[i].misses / caches[i].trials;
+		}
+		ipc = 1 / cpi;
 	}
 	
 	//calculate the total execution time in cycle
