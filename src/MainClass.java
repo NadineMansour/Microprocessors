@@ -4,6 +4,7 @@ public class MainClass {
 	float amat;
 	float ipc;
 	int ex;
+	static MainMemory main_memory;
 	/*
 	 * what we need in order to test our simulatior is the following 
 	 * Main Memory and give it the access time 
@@ -11,7 +12,7 @@ public class MainClass {
 	 * */
 	public static void main(String [] args){
 		int at = 0 ; //the access time of the main memory - should change this value
-		MainMemory main_memory = new MainMemory(at,0); //second argument --> line size 
+		main_memory = new MainMemory(at,0); //second argument --> line size 
 		int cache_levels = 0;
 		caches = new Icache [cache_levels+1];
 		
@@ -60,7 +61,17 @@ public class MainClass {
 	//calculate the AMAT
 	void AMAT(){
 		//Nadine
-		
+		// AMAT = hit time + (miss rate + miss penalty) 
+		float cycle_time = 1.0f;
+		float m_ratio = 1.0f;
+		amat = caches[caches.length - 1].access_time*cycle_time;
+		for (int i = caches.length - 1; i >= 1; i--) {
+			if( i > 1 )
+				amat += (caches[i].misses / caches[i].trials)* m_ratio * caches[i-1].access_time * cycle_time;
+			else
+				amat += (caches[i].misses / caches[i].trials) * m_ratio * main_memory.access_time * cycle_time;
+			m_ratio += caches[i].misses / caches[i].trials;
+		}
 	}
 	
 	//calculate the IPC
