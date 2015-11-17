@@ -3,9 +3,10 @@ import java.util.Arrays;
 
 public class MainClass {
 	static Icache[] caches;
-	float amat;
-	float ipc;
-	int ex;
+	static float amat;
+	static float ipc;
+	static float ex;
+	static float cycle_time = 1.0f;
 	static MainMemory main_memory;
 	/*
 	 * what we need in order to test our simulatior is the following 
@@ -44,6 +45,9 @@ public class MainClass {
 			// call method fetch on each address
 			required_addres+=2;
 		}
+		AMAT();
+		IPC();
+		EX(program.length);
 	}
 	
 	String fetch (int address){
@@ -81,10 +85,10 @@ public class MainClass {
 	
 	
 	//calculate the AMAT
-	void AMAT(){
+	static void AMAT(){
 		//Nadine
 		// AMAT = hit time + (miss rate + miss penalty) 
-		float cycle_time = 1.0f;
+		
 		float m_ratio = caches[caches.length - 1].misses / caches[caches.length - 1].trials ;
 		amat = caches[caches.length - 1].access_time*cycle_time;
 		for (int i = caches.length - 2; i >= 1; i--) {
@@ -97,7 +101,7 @@ public class MainClass {
 	}
 	
 	//calculate the IPC
-	void IPC(){
+	static void IPC(){
 		//Nadine 
 		// CPI = Base CPI + CPI instructions + CPI Data 
 		// for now we do not calculate CPI Data
@@ -114,8 +118,9 @@ public class MainClass {
 	}
 	
 	//calculate the total execution time in cycle
-	void EX(){
+	static void EX(int count){
 		//Hadeel + Mogh + Badr
+		ex = count * 1.0f / ipc * cycle_time;
 	}
 	
 
