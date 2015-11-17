@@ -1,3 +1,5 @@
+import java.util.Arrays;
+
 
 public class MainClass {
 	static Icache[] caches;
@@ -32,7 +34,6 @@ public class MainClass {
 		int required_addres = start;
 		int end = start + (program.length*2) - 2;
 		while(required_addres <=end){
-			// Nadine 
 			/*
 			 * check the caches starting from the last one in the array
 			 * if the result = "" --> miss in this level otherwise it is a hit 
@@ -40,8 +41,29 @@ public class MainClass {
 			 * in case of hit in a cache level we need to update all the higher levels using what we found in the cache
 			 * in case of misses in all levels go to main memory then update all the caches 
 			 * */
+			// call method fetch on each address
 			required_addres+=2;
 		}
+	}
+	
+	String fetch (int address){
+		//Nadine
+		String result ="";
+		for (int i = caches.length - 1 ; i <= 1; i -- ) {
+			String[] cache_result = caches[i].check_Icache(address);
+			if ( !cache_result[cache_result.length-1].equals("")){
+				// hit in level i 
+				result = cache_result[cache_result.length-1] ; 
+				//update all the higher levels
+				update_all_caches(i+1, Arrays.copyOfRange(cache_result, 0, cache_result.length-1) , address);
+				return result;
+			}
+		}
+		// misses in all the cache levels so we should go to main memory
+		String[] mem_result = main_memory.read(address);
+		result = mem_result[mem_result.length-1] ;
+		update_all_caches(1, Arrays.copyOfRange(mem_result, 0, mem_result.length-1) , address);
+		return result;
 	}
 	
 	void update_all_caches(int start_level , String []data , int ad){
