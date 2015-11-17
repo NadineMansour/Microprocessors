@@ -85,14 +85,14 @@ public class MainClass {
 		//Nadine
 		// AMAT = hit time + (miss rate + miss penalty) 
 		float cycle_time = 1.0f;
-		float m_ratio = 1.0f;
+		float m_ratio = caches[caches.length - 1].misses / caches[caches.length - 1].trials ;
 		amat = caches[caches.length - 1].access_time*cycle_time;
-		for (int i = caches.length - 1; i >= 1; i--) {
+		for (int i = caches.length - 2; i >= 1; i--) {
 			if( i > 1 )
 				amat += (caches[i].misses / caches[i].trials)* m_ratio * caches[i-1].access_time * cycle_time;
 			else
 				amat += (caches[i].misses / caches[i].trials) * m_ratio * main_memory.access_time * cycle_time;
-			m_ratio += caches[i].misses / caches[i].trials;
+			m_ratio *= caches[i].misses / caches[i].trials;
 		}
 	}
 	
@@ -102,13 +102,13 @@ public class MainClass {
 		// CPI = Base CPI + CPI instructions + CPI Data 
 		// for now we do not calculate CPI Data
 		float cpi = 1; //base  cpi
-		float m_ratio = 1.0f;
+		float m_ratio = caches[caches.length - 1].misses / caches[caches.length - 1].trials ;
 		for (int i = caches.length - 1; i >= 1; i--) {
 			if( i > 1 )
 				cpi += (caches[i].misses / caches[i].trials)* m_ratio * caches[i-1].access_time;
 			else
 				cpi += (caches[i].misses / caches[i].trials) * m_ratio * main_memory.access_time;
-			m_ratio += caches[i].misses / caches[i].trials;
+			m_ratio *= caches[i].misses / caches[i].trials;
 		}
 		ipc = 1 / cpi;
 	}
