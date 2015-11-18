@@ -24,7 +24,7 @@ public class MainClass {
 		// repeat the same line for all levels, change the values of the parameters.
 		
 		// the program to be loaded 
-		String [] program = new String [24];
+		String [] program = new String [32];
 		program[0] = "I1";
 		program[1] = "I2";
 		program[2] = "I3";
@@ -49,6 +49,14 @@ public class MainClass {
 		program[21] = "I22";
 		program[22] = "I23";
 		program[23] = "I24";
+		program[24] = "I25";
+		program[25] = "I26";
+		program[26] = "I27";
+		program[27] = "I28";
+		program[28] = "I29";
+		program[29] = "I30";
+		program[30] = "I31";
+		program[31] = "I32";
 		// repeat the same line for all the lines of code 
 		
 		// load the program to main memory
