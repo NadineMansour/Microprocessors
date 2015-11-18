@@ -18,7 +18,7 @@ public class Icache {
 	
 	int c;
 	int index_bits , offset_bits , tag_bits;
-	int hits , misses , trials; 
+	float hits , misses , trials; 
 	float hit_ratio;
 	/*
 	 * L --> number of bytes per cache line
@@ -35,16 +35,16 @@ public class Icache {
 		this.l = l;
 		this.m = m;
 		this.access_time = access_time;
-		hits = 0;
-		misses = 0;
-		trials = 0;
+		hits = 0.0f;
+		misses = 0.0f;
+		trials = 0.0f;
 		c  = s/l;
 		
 		lruFully = new int[c];
-		lruCountFully = 1;
+		lruCountFully = 0;
 		
-		lruSet = new int [c/m][m];
-		lruCountSet = new int [c/m];
+		lruSet = new int [c][l];
+		lruCountSet = new int [c];
 		
 		valid_tag = new int[c][2];
 		content = new String [c][l];
@@ -99,7 +99,9 @@ public class Icache {
 		String index = binary_address.substring(16 - offset_bits - index_bits , 16 - offset_bits) ;
 		String tag =  binary_address.substring(0 , tag_bits);
 		result[0] = Integer.parseInt(tag, 2);
-		result[1] = Integer.parseInt(index, 2);
+		if (!index.equals("")) {
+			result[1] = Integer.parseInt(index, 2);
+		}
 		result[2] = Integer.parseInt(offset, 2);
 		return result;
 	}
@@ -172,7 +174,8 @@ public class Icache {
     	 * */
     	
     	int [] division = address_subdivision(ad);
-    	
+    	int index_least = leastRecentlyUsedFully();
+    	//System.out.println("lru count: " + index_least);
     	//direct-mapped
     	if (m == 1) {
     		int index = division[1];
@@ -189,29 +192,35 @@ public class Icache {
     				valid_tag[i][0] = 1;
     				valid_tag[i][1] = division[0];
     				content[i] = data;
+    				
+    				lruFully[index_least] = lruCountFully;
+    	    		lruCountFully++;
     				return;
     			}
     		}
-    		int index = leastRecentlyUsedFully();
-    		valid_tag[index][0] = 1;
-    		valid_tag[index][1] = division[0];
-    		content[index] = data;
-    		lruFully[index] = lruCountFully;
+    		System.out.println("lru count: " + index_least);
+    		valid_tag[index_least][0] = 1;
+    		valid_tag[index_least][1] = division[0];
+    		content[index_least] = data;
+    		lruFully[index_least] = lruCountFully;
     		lruCountFully++;
     	}
     	
     	//set
     	else {
     		int index = division[1];
+    		int least = leastRecentlyUsedSet(index);
     		for (int i = index; i < m+index; i++) {
     			if (valid_tag[i][0] == 0) {
     				valid_tag[i][0] = 1;
     				valid_tag[i][1] = division[0];
     				content[i] = data;
+    				lruSet[index][least] = lruCountSet[(index*m)+least];
+    	    		lruCountSet[(index*m)+least]++;
     				return;
     			}
     		}
-    		int least = leastRecentlyUsedSet(index);
+    		
     		valid_tag[(index*m)+least][0] = 1;
     		valid_tag[(index*m)+least][1] = division[0];
     		content[(index*m)+least] = data;
@@ -238,6 +247,9 @@ public class Icache {
     			index = i;
     		}
     	}
+    	if(index == -1) {
+    		return 0;
+    	}
     	return index;
     }
     
@@ -250,6 +262,10 @@ public class Icache {
     			j = i;
     		}
     	}
+    	if (j == -1) {
+    		return 0;
+    	}
+
     	return j;
     }
     
@@ -268,10 +284,25 @@ public class Icache {
 			result = set(division, address);
 			int index = division[1];
 			int least = leastRecentlyUsedSet(index);
+			System.out.println(index+" "+ least);
 			lruSet[index][least] = lruCountSet[(index*m)+least];
     		lruCountSet[(index*m)+least]++;
 		}
 		return result; 
+	}
+	
+	public void print_cache(){
+		System.out.println("misses "+misses);
+		System.out.println("hits "+hits);
+		System.out.println("total "+trials);
+		for (int i = 0; i < content.length; i++) {
+			System.out.println("valid "+valid_tag[i][0] + " tag "+ valid_tag[i][1]);
+			String r = "";
+			for (int j = 0; j < content[i].length; j++) {
+				r += content[i][j]+" - ";
+			}
+			System.out.println(r);
+		}
 	}
 	
 
