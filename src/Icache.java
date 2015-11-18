@@ -7,8 +7,15 @@ public class Icache {
 	 * associativity = otherwise --> m-way set associative
 	 * */
 	int s , l , m , access_time ;
-	String[][] valid_tag;
+	int[][] valid_tag;
 	String[][] content;
+	
+	int [] lruFully;
+	int lruCountFully;
+	
+	int [][] lruSet;
+	int [] lruCountSet;
+	
 	int c;
 	int index_bits , offset_bits , tag_bits;
 	int hits , misses , trials; 
@@ -33,12 +40,18 @@ public class Icache {
 		trials = 0;
 		c  = s/l;
 		
-		valid_tag = new String[c][2];
+		lruFully = new int[c];
+		lruCountFully = 1;
+		
+		lruSet = new int [c/m][m];
+		lruCountSet = new int [c/m];
+		
+		valid_tag = new int[c][2];
 		content = new String [c][l];
 		//originally the cache is empty
 		for (int i = 0; i < valid_tag.length; i++) {
-			valid_tag[i][0] = "0";
-			valid_tag[i][1] = "";
+			valid_tag[i][0] = 0;
+			valid_tag[i][1] = -1;
 		}
 		
 		for (int i = 0; i < content.length; i++) {
@@ -94,23 +107,59 @@ public class Icache {
 	/*
 	 * in the nest three methods we should return an array containing the entire block to be able to 
 	 * update al the higher caches and the required result which will be stored in the last cell after the data block*/
-    String[] direct_mapped( int[]address){
+    String[] direct_mapped( int[]division, int address){ // Omar + Abdelazeem
 		String[] result = new String [l+1];
-		//Omar + Zeema
-		return result;
+
+		if (valid_tag[division[1]][1] == division[0] && valid_tag[division[1]][0] == 1) {
+			String[] tempResult = content[division[1]];
+			
+			int i = 0;
+			for (i = 0; i < l; i++) {
+				result[i] = tempResult[i];
+			}
+			result[i] = content[division[1]][division[2]];
+			return result;
+		}
+		else {
+			return null;
+		}
 	}
 	
     
-    String[] fully( int[]address){
+    String[] fully( int[]division, int address){ // Omar + Abdelazeem
 		String[] result = new String [l+1];
-		//Omar + Zeema
-		return result;
+
+		for (int n = 0; n < c; n++) {
+			if (valid_tag[n][1] == division[0] && valid_tag[n][0] == 1) {
+				String[] tempResult = content[division[1]];
+
+				int i = 0;
+				for (i = 0; i < l; i++) {
+					result[i] = tempResult[i];
+				}
+				result[i] = content[n][division[2]];
+				return result;
+			}
+		}
+		return null;
 	}
     
-    String[] set( int[]address){
+    String[] set( int[]division, int address){ // Omar + Abdelazeem
 		String[] result = new String [l+1];
-		//Omar + Zeema
-		return result;
+
+		for (int n = 0; n < m; n++) {
+			if (valid_tag[division[1]+n][1] == division[0] && valid_tag[division[1]+n][0] == 1) {
+				String[] tempResult = content[division[1]];
+				
+				int i = 0;
+				for (i = 0; i < l; i++) {
+					result[i] = tempResult[i];
+				}
+				result[i] = content[division[1]][division[2]];
+				return result;
+			}
+		}
+		return null;
 	}
     
     void  update_cache(int ad , String[] data){
@@ -121,6 +170,87 @@ public class Icache {
     	 * in case of fully or m way --> LRU HOW!!?
     	 * when updating cache valid bit to 1 and tag to the result of the sub division and the content to the data (argument)
     	 * */
+    	
+    	int [] division = address_subdivision(ad);
+    	
+    	//direct-mapped
+    	if (m == 1) {
+    		int index = division[1];
+    		valid_tag[index][0] = 1;
+    		valid_tag[index][1] = division[0];
+    		content[index] = data;
+    		return;
+    	}
+    	
+    	//fully
+    	else if (m == c) {
+    		for (int i = 0; i < c; i++) {
+    			if (valid_tag[i][0] == 0) {
+    				valid_tag[i][0] = 1;
+    				valid_tag[i][1] = division[0];
+    				content[i] = data;
+    				return;
+    			}
+    		}
+    		int index = leastRecentlyUsedFully();
+    		valid_tag[index][0] = 1;
+    		valid_tag[index][1] = division[0];
+    		content[index] = data;
+    		lruFully[index] = lruCountFully;
+    		lruCountFully++;
+    	}
+    	
+    	//set
+    	else {
+    		int index = division[1];
+    		for (int i = index; i < m+index; i++) {
+    			if (valid_tag[i][0] == 0) {
+    				valid_tag[i][0] = 1;
+    				valid_tag[i][1] = division[0];
+    				content[i] = data;
+    				return;
+    			}
+    		}
+    		int least = leastRecentlyUsedSet(index);
+    		valid_tag[(index*m)+least][0] = 1;
+    		valid_tag[(index*m)+least][1] = division[0];
+    		content[(index*m)+least] = data;
+    		
+    		// updating the LRU of set-associative
+    		lruSet[index][least] = lruCountSet[(index*m)+least];
+    		lruCountSet[(index*m)+least]++;
+    	}
+    	
+    	/* 1. address subdivision
+    	 * 2. type?
+    	 * 3. direct mapped -> access index, write
+    	 * 4. set -> check for empty place (valid = 0) / LRU
+    	 * 5. fully -> check for empty place (valid = 0) / LRU
+    	 * */
+    }
+    
+    int leastRecentlyUsedFully() { // Omar + Abdelazeem
+    	int min = lruCountFully;
+    	int index = -1;
+    	for (int i = 0; i < lruFully.length; i++) {
+    		if (lruFully[i] < min) {
+    			min = lruFully[i];
+    			index = i;
+    		}
+    	}
+    	return index;
+    }
+    
+    int leastRecentlyUsedSet(int index) { // Omar + Abdelazeem
+    	int min = lruCountSet[index];
+    	int j = -1;
+    	for (int i = 0; i < lruSet[index].length; i++) {
+    		if (lruSet[index][i] < min) {
+    			min = lruSet[index][i];
+    			j = i;
+    		}
+    	}
+    	return j;
     }
     
 	public String[] check_Icache(int address){
@@ -128,11 +258,18 @@ public class Icache {
 		trials++;
 		int [] division = address_subdivision(address);
 		if(m == 1 ){
-			result = direct_mapped(division);
+			result = direct_mapped(division, address);
 		}else if (m == c) {
-			result = fully(division);
+			result = fully(division, address);
+			int index = leastRecentlyUsedFully();
+			lruFully[index] = lruCountFully;
+    		lruCountFully++;
 		}else{
-			result = set(division);
+			result = set(division, address);
+			int index = division[1];
+			int least = leastRecentlyUsedSet(index);
+			lruSet[index][least] = lruCountSet[(index*m)+least];
+    		lruCountSet[(index*m)+least]++;
 		}
 		return result; 
 	}
