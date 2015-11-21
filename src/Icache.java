@@ -13,7 +13,7 @@ public class Icache {
 	int [] lruFully;
 	int lruCountFully;
 	
-	int [][] lruSet;
+	int [] lruSet;
 	int [] lruCountSet;
 	
 	int c;
@@ -43,8 +43,8 @@ public class Icache {
 		lruFully = new int[c];
 		lruCountFully = 0;
 		
-		lruSet = new int [c][l];
-		lruCountSet = new int [c];
+		lruSet = new int [c];
+		lruCountSet = new int [c/m];
 		
 		valid_tag = new int[c][2];
 		content = new String [c][l];
@@ -149,15 +149,16 @@ public class Icache {
     String[] set( int[]division, int address){ // Omar + Abdelazeem
 		String[] result = new String [l+1];
 
-		for (int n = 0; n < m; n++) {
-			if (valid_tag[division[1]+n][1] == division[0] && valid_tag[division[1]+n][0] == 1) {
+		int index = division[1];
+		for (int n = index*m; n < (index*m)+m; n++) {
+			if (valid_tag[n][1] == division[0] && valid_tag[n][0] == 1) {
 				String[] tempResult = content[division[1]];
 				
 				int i = 0;
 				for (i = 0; i < l; i++) {
 					result[i] = tempResult[i];
 				}
-				result[i] = content[division[1]][division[2]];
+				result[i] = content[index*m][division[2]];
 				return result;
 			}
 		}
@@ -209,25 +210,29 @@ public class Icache {
     	//set
     	else {
     		int index = division[1];
+    		//System.out.println(index);
     		int least = leastRecentlyUsedSet(index);
-    		for (int i = index; i < m+index; i++) {
+    		for (int i = index*m; i < (index*m)+m; i++) {
     			if (valid_tag[i][0] == 0) {
     				valid_tag[i][0] = 1;
     				valid_tag[i][1] = division[0];
     				content[i] = data;
-    				lruSet[index][least] = lruCountSet[(index*m)+least];
-    	    		lruCountSet[(index*m)+least]++;
+    				lruSet[i] = lruCountSet[(index)];
+    	    		lruCountSet[(index)]++;
     				return;
     			}
     		}
     		
-    		valid_tag[(index*m)+least][0] = 1;
-    		valid_tag[(index*m)+least][1] = division[0];
-    		content[(index*m)+least] = data;
+    		valid_tag[least][0] = 1;
+    		valid_tag[least][1] = division[0];
+    		
+    		//System.out.println(least);
+    		
+    		content[least] = data;
     		
     		// updating the LRU of set-associative
-    		lruSet[index][least] = lruCountSet[(index*m)+least];
-    		lruCountSet[(index*m)+least]++;
+    		lruSet[least] = lruCountSet[(index)];
+    		lruCountSet[(index)]++;
     	}
     	
     	/* 1. address subdivision
@@ -256,9 +261,10 @@ public class Icache {
     int leastRecentlyUsedSet(int index) { // Omar + Abdelazeem
     	int min = lruCountSet[index];
     	int j = -1;
-    	for (int i = 0; i < lruSet[index].length; i++) {
-    		if (lruSet[index][i] < min) {
-    			min = lruSet[index][i];
+    	for (int i = index*m; i < (index*m)+m; i++) {
+    		if (lruSet[i] < min) {
+    			min = lruSet[i];
+    			//System.out.println(min);
     			j = i;
     		}
     	}
@@ -284,9 +290,9 @@ public class Icache {
 			result = set(division, address);
 			int index = division[1];
 			int least = leastRecentlyUsedSet(index);
-			System.out.println(index+" "+ least);
-			lruSet[index][least] = lruCountSet[(index*m)+least];
-    		lruCountSet[(index*m)+least]++;
+			//System.out.println(index+" "+ least);
+    		lruSet[least] = lruCountSet[(index)];
+    		lruCountSet[(index)]++;
 		}
 		return result; 
 	}
