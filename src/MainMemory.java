@@ -19,7 +19,7 @@ public class MainMemory {
 		}
 	}
 	
-	public void load_program(String[]program, int start){
+	public void load(String[]program, int start){
 		// Hadeel + Mogh + Badr
 		// save the given code in the main memory starting from index "start"
 		// dont forget to handle the case where one line can have more than one instruction

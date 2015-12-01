@@ -10,7 +10,10 @@ import javax.swing.text.html.HTMLDocument.Iterator;
 
 public class MainClass {
 	static String [] program;
-	static Icache[] caches;
+	static String [] data;
+	static Icache[] icaches;
+	static Icache[] dcaches;
+	static int cache_cycles;
 	static float amat;
 	static float ipc;
 	static float ex;
@@ -44,6 +47,8 @@ public class MainClass {
 	  * Ibuffer[][11] = can not
 	  * Ibuffer[][12] = scoreboard corresponding entry
 	  * Ibuffer[][13] = commited
+	  * Ibuffer[][14] = 
+	  * Ibuffer[][15] = address_calculated
 	  * */
 	 
 	 
@@ -56,28 +61,36 @@ public class MainClass {
 		
 		// the program to be loaded 
 		program = new String [4];
-		program[0] = "Divd R1 R2 R3";
+		data = new String [10];
+		/*program[0] = "Divd R1 R2 R3";
 		program[1] = "Add R5 R7 R3";
 		program[2] = "Add R6 R5 R5";
 		program[3] = "Multd R7 R6 R5";
-	
+		 */
+		program[0] = "LD R1 4(R2)";
+		program[1] = "Add R3 R1 R2";
+		program[2] = "Add R6 R3 R3";
+		program[3] = "LD R4 4(R2)";
+		for (int i = 0; i < data.length; i++) {
+			data[i] = 10+"";
+		}
 		
 		//inputs for tumasulo 
 		num_of_RS = 9;
 		free_units = new Hashtable<String, Integer>();
-		free_units.put("Load", 2);
+		free_units.put("LD", 2);
 		free_units.put("Store", 2);
 		free_units.put("Add", 2);
 		free_units.put("Addd", 2);
 		free_units.put("Multd", 1);
 		execution_cycle = new Hashtable<String, Integer>();
-		execution_cycle.put("Load", 5);
+		execution_cycle.put("LD", 2);
 		execution_cycle.put("Store", 2);
 		execution_cycle.put("Add", 2);
 		execution_cycle.put("Addd", 2);
 		execution_cycle.put("Multd", 6);
 		execution_cycle.put("Divd", 13);
-		Ibuffer = new String[program.length][14];
+		Ibuffer = new String[program.length][16];
 		table = new ReservationStation[num_of_RS];
 		initializeScoreBoard();
 		initializeRegisters();
@@ -86,10 +99,14 @@ public class MainClass {
 		rob = new ROB (ROB_size);
 		int at = 6 ; //the access time of the main memory - should change this value
 		main_memory = new MainMemory(at,8); //second argument --> line size 
-		int cache_levels = 1;
-		caches = new Icache [cache_levels+1];
+		int cache_levels = 2;
+		icaches = new Icache [cache_levels+1];
+		dcaches = new Icache [cache_levels+1];
 		
-		caches[1] = new Icache(32, 8, 2, 3);
+		icaches[1] = new Icache(32, 8, 2, 5);
+		icaches[2] = new Icache(32, 8, 2, 3);
+		dcaches[1] = new Icache(32, 8, 2, 5);
+		dcaches[2] = new Icache(32, 8, 2, 3);
 		//caches[2] = new Icache(32, 8, 4, 2);
 		// repeat the same line for all levels, change the values of the parameters.
 		
@@ -97,15 +114,15 @@ public class MainClass {
 		// repeat the same line for all the lines of code 
 		
 		// load the program to main memory
-		int start = 0;
-		main_memory.load_program(program, start);
-		
+		int start_data = 0;
+		int start_program = (int)Math.pow(2, 16)/2 ;
+		main_memory.load(program, start_program);
+		main_memory.load(data, start_data);
 		//fetch all the program instructions
-		int required_addres = start;
-		int end = start + (program.length*2) - 2;
+		int required_addres = start_program;
+		int end = start_program + (program.length*2) - 2;
 		int i=0;
-		while(required_addres <=end){
-			
+		while(required_addres <=end){			
 			/*
 			 * check the caches starting from the last one in the array
 			 * if the result = "" --> miss in this level otherwise it is a hit 
@@ -118,9 +135,7 @@ public class MainClass {
 			updateIbuffer(decoded, i);						
 			i++;
 			required_addres+=2;
-		}
-		
-		
+		}		
 		AMAT();
 		IPC();
 		EX(program.length);
@@ -147,7 +162,8 @@ public class MainClass {
 			}			
 			update_ready_values();
 			//execution updates 
-			for (int i = Ibuffer.length-1; i >= 0 ; i--) {		
+			for (int i = Ibuffer.length-1; i >= 0 ; i--) {	
+				calculate_address(i);
 				execute(i);	
 				writeback(i);							
 			}
@@ -177,6 +193,26 @@ public class MainClass {
 	  * Ibuffer[][8] = number of cycle left to finish execution 
 	  * Ibuffer[][9] = started execution or not
 	  * */
+	
+	//Calculate address 
+	static void calculate_address(int i){
+
+		if(Ibuffer[i][5].equals("T") && Ibuffer[i][15].equals("F")){
+			int table_i = Integer.parseInt(Ibuffer[i][12]);
+			if(table[table_i].Qj==-1 && Ibuffer[i][3].equals("LD")){
+				if (!Ibuffer[i][11].equals("cal")) {
+					Ibuffer[i][11] = "ex";
+					int address = Integer.parseInt(Ibuffer[i][14]) + registers[table[table_i].Vj];
+					table[table_i].a = address;
+					Ibuffer[i][15] = "T";
+					System.out.println("Calculate address");
+				}
+				else{
+					Ibuffer[i][11] = "ex";
+				}			
+			}
+		}
+	}
 	
 	//Commit stage
 	static void commit(){
@@ -268,7 +304,8 @@ public class MainClass {
 	}
 	//Execute stage 
 	static void execute(int x){
-		
+		//System.out.println("IBUFFER");
+		//print_Ibuffer();
 		if(Ibuffer[x][5].equals("T")){
 			//casse 1
 			if(Ibuffer[x][9].equals("T") && !Ibuffer[x][8].equals("0")){
@@ -278,18 +315,27 @@ public class MainClass {
 				if(c==0){
 					Ibuffer[x][6] = "T";
 					Ibuffer[x][11] = "wb";
-				}
-					
+				}			
 			}
 			//casse 2 --> check if it can start EX
 			if(Ibuffer[x][9].equals("F")){
 				if(!Ibuffer[x][11].equals("ex")){
+					cache_cycles = 0;
+					execution_cycle.put("LD", cache_cycles);
 					int dest = Integer.parseInt(Ibuffer[x][2].charAt(1)+"");
 					int table_i = Integer.parseInt(Ibuffer[x][12]);
 					System.out.println("Table#"+table_i);
 					if(table[table_i].Qj==-1 && table[table_i].Qk==-1){
 						// it can start executing
 						Ibuffer[x][9] = "T";
+						
+						if (Ibuffer[x][3].equals("LD")) {
+							cache_cycles = 0;
+							int temp = Integer.parseInt(fetch(table[table_i].a));
+							execution_cycle.put("LD", cache_cycles);
+							Ibuffer[x][8] = cache_cycles+"";
+							System.out.println("Load cycles "+execution_cycle.get("LD")+" "+ Ibuffer[x][8]);
+						}
 						int c = Integer.parseInt(Ibuffer[x][8]);
 						c--;
 						Ibuffer[x][8] = c+"";
@@ -304,13 +350,9 @@ public class MainClass {
 							
 						}
 					}
-					else{
-						
-					}
 				}else{
 					Ibuffer[x][11]="";
-				}
-				
+				}	
 			}
 		}
 	}
@@ -332,6 +374,9 @@ public class MainClass {
 			break;
 		case"Multd":
 			result = s1*s2;
+			break;
+		case"LD":
+			result = Integer.parseInt(fetch(table[table_i].a));
 			break;
 		default:
 			break;
@@ -360,7 +405,13 @@ public class MainClass {
 			//update table
 			update_table_after_issue(free_fu, i);
 			next_issue++;
-			Ibuffer[i][11]="ex";
+			if(Ibuffer[i][3].equals("LD")){
+				Ibuffer[i][11]="cal";
+			}else{
+				Ibuffer[i][11]="ex";
+			}
+			
+			
 		}			
 		return false;
 	}
@@ -377,27 +428,43 @@ public class MainClass {
 	
 	static void update_table_after_issue(String n ,int x){
 		for (int i = 0; i < table.length; i++) {
+			//System.out.println(n +" "+table[i].name);
 			if(table[i].name.equals(n)){
-				table[i].busy = true;
-				table[i].op = Ibuffer[x][3];
-				//check the registers status table
-				int s1 = Integer.parseInt((Ibuffer[x][0].charAt(1)+""));
-				int s2 = Integer.parseInt((Ibuffer[x][1].charAt(1)+""));
-				int dest = Integer.parseInt((Ibuffer[x][2].charAt(1)+""));
-				if(registers_status[s1]==-1)
-					table[i].Vj = registers[Integer.parseInt(Ibuffer[x][0].charAt(1)+"")];
-				else
-					table[i].Qj = registers_status[s1];
-				
-				if(registers_status[s2]==-1)
-					table[i].Vk = registers[Integer.parseInt(Ibuffer[x][1].charAt(1)+"")];
-				else
-					table[i].Qk = registers_status[s2];
-				registers_status[dest] = Integer.parseInt(Ibuffer[x][10]);
-				Ibuffer[x][12] = i+"";
-				//the A attribute is not used now
-			}
-				
+				if (table[i].name.substring(0, 2).equals("LD")) {
+					int dest = Integer.parseInt((Ibuffer[x][2].charAt(1)+""));
+					table[i].busy = true;
+					table[i].op = Ibuffer[x][3];
+					//check the registers status table
+					int s1 = Integer.parseInt((Ibuffer[x][0].charAt(1)+""));
+					if(registers_status[s1]==-1)
+						table[i].Vj = registers[Integer.parseInt(Ibuffer[x][0].charAt(1)+"")];
+					else
+						table[i].Qj = registers_status[s1];
+					registers_status[dest] = Integer.parseInt(Ibuffer[x][10]);
+					Ibuffer[x][12] = i+"";
+					table[i].a = Integer.parseInt(Ibuffer[x][14]);
+				}
+				else{
+					table[i].busy = true;
+					table[i].op = Ibuffer[x][3];
+					//check the registers status table
+					int s1 = Integer.parseInt((Ibuffer[x][0].charAt(1)+""));
+					int s2 = Integer.parseInt((Ibuffer[x][1].charAt(1)+""));
+					int dest = Integer.parseInt((Ibuffer[x][2].charAt(1)+""));
+					if(registers_status[s1]==-1)
+						table[i].Vj = registers[Integer.parseInt(Ibuffer[x][0].charAt(1)+"")];
+					else
+						table[i].Qj = registers_status[s1];
+					
+					if(registers_status[s2]==-1)
+						table[i].Vk = registers[Integer.parseInt(Ibuffer[x][1].charAt(1)+"")];
+					else
+						table[i].Qk = registers_status[s2];
+					registers_status[dest] = Integer.parseInt(Ibuffer[x][10]);
+					Ibuffer[x][12] = i+"";
+					//the A attribute is not used now
+				}
+			}				
 		}
 	}
 
@@ -426,21 +493,59 @@ public class MainClass {
 		}
 	}
 	
+	/* 
+	  * Ibuffer[][0] = source1
+	  * Ibuffer[][1] = source2
+	  * Ibuffer[][2] = destination 
+	  * Ibuffer[][3] = op
+	  * Ibuffer[][4] = FU
+	  * Ibuffer[][5] = issued
+	  * Ibuffer[][6] = executed 
+	  * Ibuffer[][7] = written
+	  * Ibuffer[][8] = number of cycle left to finish execution 
+	  * Ibuffer[][9] = started execution or not
+	  * Ibuffer[][10] = ROB#
+	  * Ibuffer[][11] = can not
+	  * Ibuffer[][12] = scoreboard corresponding entry
+	  * Ibuffer[][13] = commited
+	  * */
+	
 	static void updateIbuffer(String[] decoded , int i){
-		Ibuffer[i][0] = decoded[2];
-		Ibuffer[i][1] = decoded[3];
-		Ibuffer[i][2] = decoded[1];
-		Ibuffer[i][3] = decoded[0];
-		Ibuffer[i][4] = needed_unit(decoded[0]);
-		Ibuffer[i][5] = "F";
-		Ibuffer[i][6] = "F";
-		Ibuffer[i][7] = "F";
-		Ibuffer[i][8] = execution_cycle.get(Ibuffer[i][3]).toString();	
-		Ibuffer[i][9] = "F";
-		Ibuffer[i][10] = "-1";
-		Ibuffer[i][11] ="";
-		Ibuffer[i][12] ="";
-		Ibuffer[i][13] = "F";
+		if(decoded[0].equals("LD")){
+			System.out.println(decoded[2]);
+			
+			Ibuffer[i][0] = decoded[2].substring(decoded[2].length()-3, decoded[2].length()-1);
+			Ibuffer[i][2] = decoded[1];
+			Ibuffer[i][3] = decoded[0];
+			Ibuffer[i][4] = needed_unit(decoded[0]);
+			Ibuffer[i][5] = "F";
+			Ibuffer[i][6] = "F";
+			Ibuffer[i][7] = "F";
+			Ibuffer[i][8] = execution_cycle.get(Ibuffer[i][3]).toString();	
+			Ibuffer[i][9] = "F";
+			Ibuffer[i][10] = "-1";
+			Ibuffer[i][11] ="";
+			Ibuffer[i][12] ="";
+			Ibuffer[i][13] = "F";
+			Ibuffer[i][14] = decoded[2].substring(0, decoded[2].length()-4);
+			Ibuffer[i][15] = "F";
+		}else{
+			Ibuffer[i][0] = decoded[2];
+			Ibuffer[i][1] = decoded[3];
+			Ibuffer[i][2] = decoded[1];
+			Ibuffer[i][3] = decoded[0];
+			Ibuffer[i][4] = needed_unit(decoded[0]);
+			Ibuffer[i][5] = "F";
+			Ibuffer[i][6] = "F";
+			Ibuffer[i][7] = "F";
+			Ibuffer[i][8] = execution_cycle.get(Ibuffer[i][3]).toString();	
+			Ibuffer[i][9] = "F";
+			Ibuffer[i][10] = "-1";
+			Ibuffer[i][11] ="";
+			Ibuffer[i][12] ="";
+			Ibuffer[i][13] = "F";
+			Ibuffer[i][15] = "F";
+		}	
 	}
 	
 	static String needed_unit(String op){
@@ -462,12 +567,19 @@ public class MainClass {
 	}
 	
 	static String fetch (int address){
-		//Nadine
 		String result ="";
-		for (int i = caches.length - 1 ; i >= 1; i -- ) {
-			String[] cache_result = caches[i].check_Icache(address);
+		Icache[] used_cache;
+		if (address < (int)Math.pow(2, 16) / 2) {
+			used_cache = dcaches;
+		}
+		else{
+			used_cache = icaches;
+		}
+		for (int i = used_cache.length - 1 ; i >= 1; i -- ) {
+			String[] cache_result = used_cache[i].check_Icache(address);
 			if ( cache_result!=null){
 				// hit in level i 
+				cache_cycles+=used_cache[i].access_time;
 				result = cache_result[cache_result.length-1] ; 
 				//update all the higher levels
 				
@@ -478,29 +590,31 @@ public class MainClass {
 				
 				//update_all_caches(i+1, Arrays.copyOfRange(cache_result, 0, cache_result.length-1) , address);
 				update_all_caches(i+1, tempData , address);
-				caches[i].hits+=1;
+				used_cache[i].hits+=1;
 				return result;
 			}else{
-				caches[i].misses+=1;
+				used_cache[i].misses+=1;
+				cache_cycles+=used_cache[i].access_time;
 			}
 		}
 		// misses in all the cache levels so we should go to main memory
 		String[] mem_result = main_memory.read(address);
 		result = mem_result[mem_result.length-1] ;
 		update_all_caches(1, Arrays.copyOfRange(mem_result, 0, mem_result.length-1) , address);
+		cache_cycles+= main_memory.access_time;
 		return result;
 	}
 	
 	static void update_all_caches(int start_level , String []data , int ad){
-		for (int i = start_level; i <caches.length; i++) {
-			caches[i].update_cache(ad, data);
+		for (int i = start_level; i <icaches.length; i++) {
+			icaches[i].update_cache(ad, data);
 		}
 	}
 	
 	// calculate the hit ratio for all the cache levels 
 	void cache_hit_ratio(){
-		for (int i = 0; i < caches.length; i++) {
-			caches[i].hit_ratio = caches[i].hits / caches[i].trials;
+		for (int i = 0; i < icaches.length; i++) {
+			icaches[i].hit_ratio = icaches[i].hits / icaches[i].trials;
 		}
 	}
 	
@@ -511,15 +625,15 @@ public class MainClass {
 		//Nadine
 		// AMAT = hit time + (miss rate * miss penalty) 
 		
-		float m_ratio = caches[caches.length - 1].misses / caches[caches.length - 1].trials ;
+		float m_ratio = icaches[icaches.length - 1].misses / icaches[icaches.length - 1].trials ;
 		System.out.println("m-ratio "+m_ratio);
-		amat = caches[caches.length - 1].access_time*cycle_time;
-		for (int i = caches.length - 1; i >= 1; i--) {
+		amat = icaches[icaches.length - 1].access_time*cycle_time;
+		for (int i = icaches.length - 1; i >= 1; i--) {
 			if( i > 1 )
-				amat +=  m_ratio * caches[i-1].access_time * cycle_time;
+				amat +=  m_ratio * icaches[i-1].access_time * cycle_time;
 			else
 				amat +=   m_ratio * main_memory.access_time * cycle_time;
-			m_ratio *= caches[i].misses / caches[i].trials;
+			m_ratio *= icaches[i].misses / icaches[i].trials;
 		}
 	}
 	
@@ -529,13 +643,13 @@ public class MainClass {
 		// CPI = Base CPI + CPI instructions + CPI Data 
 		// for now we do not calculate CPI Data
 		float cpi = 1; //base  cpi
-		float m_ratio = caches[caches.length - 1].misses / caches[caches.length - 1].trials ;
-		for (int i = caches.length - 1; i >= 1; i--) {
+		float m_ratio = icaches[icaches.length - 1].misses / icaches[icaches.length - 1].trials ;
+		for (int i = icaches.length - 1; i >= 1; i--) {
 			if( i > 1 )
-				cpi +=  m_ratio * caches[i-1].access_time;
+				cpi +=  m_ratio * icaches[i-1].access_time;
 			else
 				cpi +=  m_ratio * main_memory.access_time;
-			m_ratio *= caches[i].misses / caches[i].trials;
+			m_ratio *= icaches[i].misses / icaches[i].trials;
 		}
 		ipc = 1 / cpi;
 	}
@@ -560,7 +674,7 @@ public class MainClass {
 	static void print_Ibuffer(){
 		System.out.println("Ibuffer");
 		for (int i = 0; i < Ibuffer.length; i++) {
-			String result = "I#" + i + " S:" + Ibuffer[i][0] + " S2:" + Ibuffer[i][1] + " D:" + Ibuffer[i][2] + " Op:"+ Ibuffer[i][3] + " FU:"+ Ibuffer[i][4] + " issued:" + Ibuffer[i][5] + " executed:" + Ibuffer[i][6] + " wb:" +Ibuffer[i][7]+" com:" +Ibuffer[i][13] + " cycles:"+Ibuffer[i][8] +" Started Ex:"+Ibuffer[i][9]+" ROB:"+Ibuffer[i][10];    
+			String result = "I#" + i + " S:" + Ibuffer[i][0] + " S2:" + Ibuffer[i][1] + " D:" + Ibuffer[i][2] + " Op:"+ Ibuffer[i][3] + " FU:"+ Ibuffer[i][4] + " issued:" + Ibuffer[i][5] + " executed:" + Ibuffer[i][6] + " wb:" +Ibuffer[i][7]+" com:" +Ibuffer[i][13] + " cycles:"+Ibuffer[i][8] +" Started Ex:"+Ibuffer[i][9]+" ROB:"+Ibuffer[i][10] +" A:"+Ibuffer[i][14] + " cant:"+Ibuffer[i][11];    
 			System.out.println(result);
 		}
 		System.out.println("***********************");
@@ -568,9 +682,9 @@ public class MainClass {
 	
 	static void  print_cache(){
 		System.out.println("Cache content");
-		for (int i = 1; i < caches.length; i++) {
+		for (int i = 1; i < icaches.length; i++) {
 			System.out.println("Cache Level "+i);
-			caches[i].print_cache();
+			icaches[i].print_cache();
 			System.out.println("*************************");
 		}		
 	}
