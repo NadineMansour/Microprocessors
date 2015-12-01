@@ -31,6 +31,7 @@ public class ROB {
 	}
 	
 	int[] commit(int x){
+		
 		if(x == head && entries[head].ready){
 			int[] result = {entries[head].destination, entries[head].value};
 			//remove the entry from the ROB

@@ -49,6 +49,7 @@ public class MainClass {
 	  * Ibuffer[][13] = commited
 	  * Ibuffer[][14] = 
 	  * Ibuffer[][15] = address_calculated
+	  * Ibuffer[][16] = writing cycles
 	  * */
 	 
 	 
@@ -60,17 +61,20 @@ public class MainClass {
 	public static void main(String [] args){
 		
 		// the program to be loaded 
-		program = new String [4];
+		program = new String [1];
 		data = new String [10];
 		/*program[0] = "Divd R1 R2 R3";
 		program[1] = "Add R5 R7 R3";
 		program[2] = "Add R6 R5 R5";
 		program[3] = "Multd R7 R6 R5";
 		 */
-		program[0] = "LD R1 4(R2)";
+		/*program[0] = "LD R1 4(R2)";
 		program[1] = "Add R3 R1 R2";
 		program[2] = "Add R6 R3 R3";
 		program[3] = "LD R4 4(R2)";
+		*/
+		
+		program[0] = "ST 4(R2) R1";
 		for (int i = 0; i < data.length; i++) {
 			data[i] = 10+"";
 		}
@@ -79,18 +83,18 @@ public class MainClass {
 		num_of_RS = 9;
 		free_units = new Hashtable<String, Integer>();
 		free_units.put("LD", 2);
-		free_units.put("Store", 2);
+		free_units.put("ST", 2);
 		free_units.put("Add", 2);
 		free_units.put("Addd", 2);
 		free_units.put("Multd", 1);
 		execution_cycle = new Hashtable<String, Integer>();
 		execution_cycle.put("LD", 2);
-		execution_cycle.put("Store", 2);
+		execution_cycle.put("ST",1);
 		execution_cycle.put("Add", 2);
 		execution_cycle.put("Addd", 2);
 		execution_cycle.put("Multd", 6);
 		execution_cycle.put("Divd", 13);
-		Ibuffer = new String[program.length][16];
+		Ibuffer = new String[program.length][17];
 		table = new ReservationStation[num_of_RS];
 		initializeScoreBoard();
 		initializeRegisters();
@@ -179,29 +183,19 @@ public class MainClass {
 		}		
 	}
 
-	
-
-	 /* 
-	  * Ibuffer[][0] = source1
-	  * Ibuffer[][1] = source2
-	  * Ibuffer[][2] = destination 
-	  * Ibuffer[][3] = op
-	  * Ibuffer[][4] = FU
-	  * Ibuffer[][5] = issued
-	  * Ibuffer[][6] = executed 
-	  * Ibuffer[][7] = written
-	  * Ibuffer[][8] = number of cycle left to finish execution 
-	  * Ibuffer[][9] = started execution or not
-	  * */
-	
 	//Calculate address 
 	static void calculate_address(int i){
 
 		if(Ibuffer[i][5].equals("T") && Ibuffer[i][15].equals("F")){
 			int table_i = Integer.parseInt(Ibuffer[i][12]);
-			if(table[table_i].Qj==-1 && Ibuffer[i][3].equals("LD")){
+			if(table[table_i].Qj==-1 && (Ibuffer[i][3].equals("LD") || Ibuffer[i][3].equals("ST") )){
 				if (!Ibuffer[i][11].equals("cal")) {
-					Ibuffer[i][11] = "ex";
+					if (Ibuffer[i][3].equals("ST")) {
+						Ibuffer[i][11] = "";
+					}
+					else{
+						Ibuffer[i][11] = "ex";
+					}				
 					int address = Integer.parseInt(Ibuffer[i][14]) + registers[table[table_i].Vj];
 					table[table_i].a = address;
 					Ibuffer[i][15] = "T";
@@ -257,12 +251,16 @@ public class MainClass {
 	static void writeback(int x){
 		if(Ibuffer[x][6].equals("T") && !Ibuffer[x][7].equals("T")){
 			if(!Ibuffer[x][11].equals("wb")){
-				rob.update_value(Integer.parseInt(Ibuffer[x][10]), execute_result(x));
-				Ibuffer[x][7]="T";	
-				//update scoreboard - delete its entry - update all the depending entries 
-				update_scoreboard(x);
-				remove_scoreboard(x);
-				Ibuffer[x][11]="com";
+				if(Ibuffer[x][3].equals("ST") && !Ibuffer[x][16].equals("1")){
+					Ibuffer[x][16] = (Integer.parseInt(Ibuffer[x][16] )-1)+"";
+				}else{
+					rob.update_value(Integer.parseInt(Ibuffer[x][10]), execute_result(x));
+					Ibuffer[x][7]="T";	
+					//update scoreboard - delete its entry - update all the depending entries 
+					update_scoreboard(x);
+					remove_scoreboard(x);
+					Ibuffer[x][11]="com";
+				}
 			}
 			else{
 				Ibuffer[x][11]="";
@@ -331,10 +329,18 @@ public class MainClass {
 						
 						if (Ibuffer[x][3].equals("LD")) {
 							cache_cycles = 0;
-							int temp = Integer.parseInt(fetch(table[table_i].a));
+							//int temp = Integer.parseInt(fetch(table[table_i].a));
+							setCachesCycles(table[table_i].a);
 							execution_cycle.put("LD", cache_cycles);
 							Ibuffer[x][8] = cache_cycles+"";
 							System.out.println("Load cycles "+execution_cycle.get("LD")+" "+ Ibuffer[x][8]);
+						}
+						if (Ibuffer[x][3].equals("ST")) {
+							cache_cycles = 0;
+							//int temp = Integer.parseInt(fetch(table[table_i].a));
+							setCachesCycles(table[table_i].a);
+							Ibuffer[x][16] = cache_cycles+"";
+							System.out.println("Store cycles "+Ibuffer[x][16]);
 						}
 						int c = Integer.parseInt(Ibuffer[x][8]);
 						c--;
@@ -405,7 +411,7 @@ public class MainClass {
 			//update table
 			update_table_after_issue(free_fu, i);
 			next_issue++;
-			if(Ibuffer[i][3].equals("LD")){
+			if(Ibuffer[i][3].equals("LD") || Ibuffer[i][3].equals("ST")){
 				Ibuffer[i][11]="cal";
 			}else{
 				Ibuffer[i][11]="ex";
@@ -430,7 +436,7 @@ public class MainClass {
 		for (int i = 0; i < table.length; i++) {
 			//System.out.println(n +" "+table[i].name);
 			if(table[i].name.equals(n)){
-				if (table[i].name.substring(0, 2).equals("LD")) {
+				if (table[i].name.substring(0, 2).equals("LD") || table[i].name.substring(0, 2).equals("ST")) {
 					int dest = Integer.parseInt((Ibuffer[x][2].charAt(1)+""));
 					table[i].busy = true;
 					table[i].op = Ibuffer[x][3];
@@ -511,9 +517,7 @@ public class MainClass {
 	  * */
 	
 	static void updateIbuffer(String[] decoded , int i){
-		if(decoded[0].equals("LD")){
-			System.out.println(decoded[2]);
-			
+		if(decoded[0].equals("LD")){		
 			Ibuffer[i][0] = decoded[2].substring(decoded[2].length()-3, decoded[2].length()-1);
 			Ibuffer[i][2] = decoded[1];
 			Ibuffer[i][3] = decoded[0];
@@ -528,6 +532,22 @@ public class MainClass {
 			Ibuffer[i][12] ="";
 			Ibuffer[i][13] = "F";
 			Ibuffer[i][14] = decoded[2].substring(0, decoded[2].length()-4);
+			Ibuffer[i][15] = "F";
+		}else if (decoded[0].equals("ST")) {
+			Ibuffer[i][0] = decoded[1].substring(decoded[1].length()-3, decoded[1].length()-1);
+			Ibuffer[i][2] = decoded[2];
+			Ibuffer[i][3] = decoded[0];
+			Ibuffer[i][4] = needed_unit(decoded[0]);
+			Ibuffer[i][5] = "F";
+			Ibuffer[i][6] = "F";
+			Ibuffer[i][7] = "F";
+			Ibuffer[i][8] = execution_cycle.get(Ibuffer[i][3]).toString();	
+			Ibuffer[i][9] = "F";
+			Ibuffer[i][10] = "-1";
+			Ibuffer[i][11] ="";
+			Ibuffer[i][12] ="";
+			Ibuffer[i][13] = "F";
+			Ibuffer[i][14] = decoded[1].substring(0, decoded[1].length()-4);
 			Ibuffer[i][15] = "F";
 		}else{
 			Ibuffer[i][0] = decoded[2];
@@ -566,6 +586,8 @@ public class MainClass {
 		return result;
 	}
 	
+	
+	
 	static String fetch (int address){
 		String result ="";
 		Icache[] used_cache;
@@ -579,7 +601,7 @@ public class MainClass {
 			String[] cache_result = used_cache[i].check_Icache(address);
 			if ( cache_result!=null){
 				// hit in level i 
-				cache_cycles+=used_cache[i].access_time;
+				//cache_cycles+=used_cache[i].access_time;
 				result = cache_result[cache_result.length-1] ; 
 				//update all the higher levels
 				
@@ -594,17 +616,37 @@ public class MainClass {
 				return result;
 			}else{
 				used_cache[i].misses+=1;
-				cache_cycles+=used_cache[i].access_time;
+				//cache_cycles+=used_cache[i].access_time;
 			}
 		}
 		// misses in all the cache levels so we should go to main memory
 		String[] mem_result = main_memory.read(address);
 		result = mem_result[mem_result.length-1] ;
 		update_all_caches(1, Arrays.copyOfRange(mem_result, 0, mem_result.length-1) , address);
-		cache_cycles+= main_memory.access_time;
+		//cache_cycles+= main_memory.access_time;
 		return result;
 	}
 	
+	static void setCachesCycles(int address){
+		Icache[] used_cache;
+		if (address < (int)Math.pow(2, 16) / 2) {
+			used_cache = dcaches;
+		}
+		else{
+			used_cache = icaches;
+		}
+		for (int i = used_cache.length - 1 ; i >= 1; i -- ) {
+			String[] cache_result = used_cache[i].check_Icache(address);
+			if ( cache_result!=null){
+				// hit in level i 
+				cache_cycles+=used_cache[i].access_time;
+			}else{
+				cache_cycles+=used_cache[i].access_time;
+			}
+		}
+		// misses in all the cache levels so we should go to main memory
+		cache_cycles+= main_memory.access_time;
+	}	
 	static void update_all_caches(int start_level , String []data , int ad){
 		for (int i = start_level; i <icaches.length; i++) {
 			icaches[i].update_cache(ad, data);

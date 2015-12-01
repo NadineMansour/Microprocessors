@@ -107,8 +107,8 @@ public class Icache {
 	}
 	
 	/*
-	 * in the nest three methods we should return an array containing the entire block to be able to 
-	 * update al the higher caches and the required result which will be stored in the last cell after the data block*/
+	 * in the next three methods we should return an array containing the entire block to be able to 
+	 * update all the higher caches and the required result which will be stored in the last cell after the data block*/
     String[] direct_mapped( int[]division, int address){ // Omar + Abdelazeem
 		String[] result = new String [l+1];
 
@@ -295,6 +295,13 @@ public class Icache {
     		lruCountSet[(index)]++;
 		}
 		return result; 
+	}
+	
+	public boolean write(int address, String data){
+		//Omar
+		trials++;
+		
+		return false;
 	}
 	
 	public void print_cache(){
